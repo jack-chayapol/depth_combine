@@ -113,9 +113,6 @@ main (int argc, char** argv)
   ros::init (argc, argv, "my_pcl_tutorial");
   ros::NodeHandle nh;
 
-  // Create a ROS subscriber for the input point cloud
-  //ros::Subscriber sub = nh.subscribe ("forward_pelvis_realsense_d430/depth/color/points", 1, cloud_cb);
-
   //Synchronize the message before calling cloud_cb
   message_filters::Subscriber<sensor_msgs::PointCloud2> forward_sub(nh, "forward_pelvis_realsense_d430/depth/color/points", 1000);
   message_filters::Subscriber<sensor_msgs::PointCloud2> downward_sub(nh, "downward_pelvis_realsense_d430/depth/color/points", 1000);
