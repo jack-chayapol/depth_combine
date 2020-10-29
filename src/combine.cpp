@@ -59,9 +59,7 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
 
   // Convert to PCL data type
   pcl_conversions::toPCL(conv_cloud_front, *cloud_front);
-
   pcl_conversions::toPCL(conv_cloud_down, *cloud_down);
-
   pcl_conversions::toPCL(conv_cloud_back, *cloud_back);
 
   // Perform the actual filtering
@@ -112,7 +110,6 @@ main (int argc, char** argv)
   sync.registerCallback(boost::bind(&cloud_cb, _1, _2, _3));
 
   // Create a ROS publisher for the output point cloud
-//   pub = nh.advertise< pcl::PointCloud<pcl::PointXYZ> > ("depth_combined", 1);
   pub = nh.advertise<sensor_msgs::PointCloud2>("depth_combined", 1);
 
   //tf2 listener
