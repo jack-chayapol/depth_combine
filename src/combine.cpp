@@ -81,7 +81,6 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
   sor_b.filter (cloud_filtered_back);
 
   //Combine clouds
-
   pcl::PCLPointCloud2 cloud_combined; 
   pcl::concatenatePointCloud (cloud_combined, cloud_filtered_front, cloud_combined);
   pcl::concatenatePointCloud (cloud_combined, cloud_filtered_down, cloud_combined);
