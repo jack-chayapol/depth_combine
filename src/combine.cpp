@@ -6,14 +6,16 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/PCLPointCloud2.h>
+
 #include <pcl_ros/point_cloud.h>
 #include "pcl_ros/transforms.h"
 
-#include <tf2_eigen/tf2_eigen.h>
+
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <geometry_msgs/TransformStamped.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+
 
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -30,30 +32,17 @@ tf2_ros::TransformListener* tf2_listener;
 void 
 cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::PointCloud2ConstPtr& downward, const sensor_msgs::PointCloud2ConstPtr& backward)
 {
-  //Get tf from world to front_depth
-  geometry_msgs::TransformStamped transform_stamped_front = tfBuffer.lookupTransform("forward_pelvis_realsense_d430_depth_frame","forward_pelvis_realsense_d430_depth_frame", 
-        ros::Time(0));
-  
-  geometry_msgs::TransformStamped transform_stamped_down = tfBuffer.lookupTransform("backward_pelvis_realsense_d430_depth_frame","backward_pelvis_realsense_d430_depth_frame",
-        ros::Time(0));
-  
-  // geometry_msgs::TransformStamped transform_stamped_back = tfBuffer.lookupTransform("backward_pelvis_realsense_d430_depth_frame","world", 
-  //       ros::Time(0));
-  
+ 
   //Container for converted cloud
   sensor_msgs::PointCloud2 conv_cloud_front;
   sensor_msgs::PointCloud2 conv_cloud_down;
-  // sensor_msgs::PointCloud2 conv_cloud_back;
+  sensor_msgs::PointCloud2 conv_cloud_back;
 
-  //Convert coordinate using pcl_ros::transformPointCloud
-  Eigen::Matrix4f mat_front = tf2::transformToEigen(transform_stamped_front.transform).matrix().cast<float>();
-  pcl_ros::transformPointCloud(mat_front, *forward, conv_cloud_front);
-  
-  Eigen::Matrix4f mat_down = tf2::transformToEigen(transform_stamped_down.transform).matrix().cast<float>();
-  pcl_ros::transformPointCloud(mat_down, *downward, conv_cloud_down);
-  
-  // Eigen::Matrix4f mat_back = tf2::transformToEigen(transform_stamped_back.transform).matrix().cast<float>();
-  // pcl_ros::transformPointCloud(mat_back, *backward, conv_cloud_back);
+  //Transform Pointcloud
+  pcl_ros::transformPointCloud ("base_link", *forward, conv_cloud_front, tfBuffer);
+  pcl_ros::transformPointCloud ("base_link", *downward, conv_cloud_down, tfBuffer);
+  pcl_ros::transformPointCloud ("base_link", *backward, conv_cloud_back, tfBuffer);
+
   
   // Container for original & filtered data
   pcl::PCLPointCloud2* cloud_front = new pcl::PCLPointCloud2; 
@@ -64,16 +53,14 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
   pcl::PCLPointCloud2ConstPtr cloudPtr_down(cloud_down);
   pcl::PCLPointCloud2 cloud_filtered_down;
   
-  // pcl::PCLPointCloud2* cloud_back = new pcl::PCLPointCloud2; 
-  // pcl::PCLPointCloud2ConstPtr cloudPtr_back(cloud_back);
-  // pcl::PCLPointCloud2 cloud_filtered_back;
+  pcl::PCLPointCloud2* cloud_back = new pcl::PCLPointCloud2; 
+  pcl::PCLPointCloud2ConstPtr cloudPtr_back(cloud_back);
+  pcl::PCLPointCloud2 cloud_filtered_back;
 
   // Convert to PCL data type
   pcl_conversions::toPCL(conv_cloud_front, *cloud_front);
-
   pcl_conversions::toPCL(conv_cloud_down, *cloud_down);
-
-  // pcl_conversions::toPCL(conv_cloud_back, *cloud_back);
+  pcl_conversions::toPCL(conv_cloud_back, *cloud_back);
 
   // Perform the actual filtering
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor_f;
@@ -86,22 +73,20 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
   sor_d.setLeafSize (0.05, 0.05, 0.05);
   sor_d.filter (cloud_filtered_down);
 
-  // pcl::VoxelGrid<pcl::PCLPointCloud2> sor_b;
-  // sor_b.setInputCloud (cloudPtr_back);
-  // sor_b.setLeafSize (0.05, 0.05, 0.05);
-  // sor_b.filter (cloud_filtered_back);
-
+  pcl::VoxelGrid<pcl::PCLPointCloud2> sor_b;
+  sor_b.setInputCloud (cloudPtr_back);
+  sor_b.setLeafSize (0.05, 0.05, 0.05);
+  sor_b.filter (cloud_filtered_back);
 
   //Combine clouds
-  // pcl::PCLPointCloud2 cloud_combined; 
-  // pcl::concatenatePointCloud (cloud_combined, cloud_filtered_down, cloud_combined);
-  pcl::concatenatePointCloud (cloud_filtered_front, cloud_filtered_down, cloud_filtered_front);
-
-  // pcl::concatenatePointCloud (cloud_combined, cloud_filtered_back, cloud_combined);
+  pcl::PCLPointCloud2 cloud_combined; 
+  pcl::concatenatePointCloud (cloud_combined, cloud_filtered_front, cloud_combined);
+  pcl::concatenatePointCloud (cloud_combined, cloud_filtered_down, cloud_combined);
+  pcl::concatenatePointCloud (cloud_combined, cloud_filtered_back, cloud_combined);
   
   // Convert to ROS data type
   sensor_msgs::PointCloud2 depth_combined;
-  pcl_conversions::moveFromPCL(cloud_filtered_front, depth_combined);
+  pcl_conversions::moveFromPCL(cloud_combined, depth_combined);
 
   // Publish the data
   pub.publish (depth_combined);
@@ -125,7 +110,7 @@ main (int argc, char** argv)
   sync.registerCallback(boost::bind(&cloud_cb, _1, _2, _3));
 
   // Create a ROS publisher for the output point cloud
-  pub = nh.advertise<sensor_msgs::PointCloud2> ("depth_combined", 1);
+  pub = nh.advertise<sensor_msgs::PointCloud2>("depth_combined", 1);
 
   //tf2 listener
   tf2_listener = new tf2_ros::TransformListener(tfBuffer);

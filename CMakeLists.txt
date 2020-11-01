@@ -10,13 +10,20 @@ project(depth_combine)
 find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   pcl_ros
+  tf2
+  tf2_ros
+  tf2_msgs
+  tf2_sensor_msgs
   roscpp
   sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package( PCL REQUIRED )
+include_directories(  ${catkin_INCLUDE_DIRS}  ${PCL_INCLUDE_DIRS} )
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -207,4 +214,4 @@ include_directories(
 # catkin_add_nosetests(test)
 
 add_executable(combine src/combine.cpp)
-target_link_libraries(combine ${catkin_LIBRARIES})
+target_link_libraries(combine ${PCL_LIBRARIES} ${catkin_LIBRARIES})
