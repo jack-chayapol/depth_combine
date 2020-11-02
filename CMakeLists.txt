@@ -21,7 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package( PCL REQUIRED )
-include_directories(  ${catkin_INCLUDE_DIRS}  ${PCL_INCLUDE_DIRS} )
+include_directories(include  ${catkin_INCLUDE_DIRS}  ${PCL_INCLUDE_DIRS} )
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
@@ -215,3 +215,7 @@ include_directories(
 
 add_executable(combine src/combine.cpp)
 target_link_libraries(combine ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(front_mapping src/front_mapping.cpp)
+target_link_libraries(front_mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+add_dependencies(front_mapping ${catkin_EXPORTED_TARGETS})
