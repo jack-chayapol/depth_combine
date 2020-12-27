@@ -213,5 +213,14 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
+# Combine depth
 add_executable(combine src/combine.cpp)
 target_link_libraries(combine ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+# Registration
+#add_executable(register src/registration.cpp)
+#target_link_libraries(register ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+# Ground segmentation
+add_executable(ground_segment src/ground_segment.cpp)
+target_link_libraries(ground_segment ${PCL_LIBRARIES} ${catkin_LIBRARIES})

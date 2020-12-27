@@ -38,10 +38,20 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
   sensor_msgs::PointCloud2 conv_cloud_down;
   sensor_msgs::PointCloud2 conv_cloud_back;
 
+
   //Transform Pointcloud
-  pcl_ros::transformPointCloud ("base_link", *forward, conv_cloud_front, tfBuffer);
-  pcl_ros::transformPointCloud ("base_link", *downward, conv_cloud_down, tfBuffer);
-  pcl_ros::transformPointCloud ("base_link", *backward, conv_cloud_back, tfBuffer);
+  try 
+    {
+        pcl_ros::transformPointCloud ("world", *forward, conv_cloud_front, tfBuffer);
+        pcl_ros::transformPointCloud ("world", *downward, conv_cloud_down, tfBuffer);
+        pcl_ros::transformPointCloud ("world", *backward, conv_cloud_back, tfBuffer);
+      
+      // ROS_INFO("tf received\n");
+    }
+  catch (tf2::TransformException &ex) 
+    {
+      // ROS_WARN("Failure %s\n", ex.what()); //Print exception which was caught
+    }
 
   
   // Container for original & filtered data
@@ -65,28 +75,29 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
   // Perform the actual filtering
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor_f;
   sor_f.setInputCloud (cloudPtr_front);
-  sor_f.setLeafSize (0.05, 0.05, 0.05);
+  sor_f.setLeafSize (0.03, 0.03, 0.03);
   sor_f.filter (cloud_filtered_front);
 
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor_d;
   sor_d.setInputCloud (cloudPtr_down);
-  sor_d.setLeafSize (0.05, 0.05, 0.05);
+  sor_d.setLeafSize (0.03, 0.03, 0.03);
   sor_d.filter (cloud_filtered_down);
 
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor_b;
   sor_b.setInputCloud (cloudPtr_back);
-  sor_b.setLeafSize (0.05, 0.05, 0.05);
+  sor_b.setLeafSize (0.03, 0.03, 0.03);
   sor_b.filter (cloud_filtered_back);
 
   //Combine clouds
-  pcl::PCLPointCloud2 cloud_combined; 
-  pcl::concatenatePointCloud (cloud_combined, cloud_filtered_front, cloud_combined);
-  pcl::concatenatePointCloud (cloud_combined, cloud_filtered_down, cloud_combined);
-  pcl::concatenatePointCloud (cloud_combined, cloud_filtered_back, cloud_combined);
-  
+  pcl::PCLPointCloud2* cloud_combined = new pcl::PCLPointCloud2; 
+  pcl::PCLPointCloud2ConstPtr cloudPtr_combined(cloud_combined);
+  pcl::concatenatePointCloud (*cloud_combined, cloud_filtered_front, *cloud_combined);
+  pcl::concatenatePointCloud (*cloud_combined, cloud_filtered_down, *cloud_combined);
+  pcl::concatenatePointCloud (*cloud_combined, cloud_filtered_back, *cloud_combined);
+
   // Convert to ROS data type
   sensor_msgs::PointCloud2 depth_combined;
-  pcl_conversions::moveFromPCL(cloud_combined, depth_combined);
+  pcl_conversions::moveFromPCL(*cloud_combined, depth_combined);
 
   // Publish the data
   pub.publish (depth_combined);
@@ -96,7 +107,7 @@ int
 main (int argc, char** argv)
 {
   // Initialize ROS
-  ros::init (argc, argv, "my_pcl_tutorial");
+  ros::init (argc, argv, "combine");
   ros::NodeHandle nh;
 
   //Synchronize the message before calling cloud_cb
@@ -114,6 +125,9 @@ main (int argc, char** argv)
 
   //tf2 listener
   tf2_listener = new tf2_ros::TransformListener(tfBuffer);
+  
+  //Loop rate 10 Hz
+  ros::Rate loop_rate(10);
 
   // Spin
   ros::spin ();
