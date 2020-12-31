@@ -1,0 +1,16 @@
+<launch>
+        <arg name="node_start_delay" default="1.0" />
+        
+        <!-- Combine pointcloud from depth cameras -->
+        <node pkg="depth_combine" name="combine" type="combine" />
+
+        <!-- Segment ground and obstacle point cloud as /ground_cloud and /obs_cloud -->
+        <node pkg="depth_combine" name="ground_segmentation" type="ground_segment" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " />
+
+        <!-- Combine /obs_cloud with pointcloud from velodyne for /obstacle -->
+        <node pkg="depth_combine" name="obs_combine" type="obs_combine" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " />
+
+        <!-- Launch Rviz for visualization -->
+        <node name="rviz" pkg="rviz" type="rviz" args="-d $(find depth_combine)/rviz/rviz_config.rviz" />
+
+</launch>

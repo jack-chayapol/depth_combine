@@ -224,3 +224,7 @@ target_link_libraries(combine ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 # Ground segmentation
 add_executable(ground_segment src/ground_segment.cpp)
 target_link_libraries(ground_segment ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+# Combine obstacle cloud
+add_executable(obs_combine src/obs_combine.cpp)
+target_link_libraries(obs_combine ${PCL_LIBRARIES} ${catkin_LIBRARIES})
