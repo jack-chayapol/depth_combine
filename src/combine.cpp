@@ -5,8 +5,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
-#include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/PCLPointCloud2.h>
 
 #include <pcl_ros/point_cloud.h>
 #include "pcl_ros/transforms.h"
@@ -78,17 +79,17 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
   // Perform the voxle grid filtering
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor_f;
   sor_f.setInputCloud (cloudPtr_front);
-  sor_f.setLeafSize (0.03, 0.03, 0.03);
+  sor_f.setLeafSize (0.02, 0.02, 0.02);
   sor_f.filter (cloud_filtered_front);
 
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor_d;
   sor_d.setInputCloud (cloudPtr_down);
-  sor_d.setLeafSize (0.03, 0.03, 0.03);
+  sor_d.setLeafSize (0.02, 0.02, 0.02);
   sor_d.filter (cloud_filtered_down);
 
   pcl::VoxelGrid<pcl::PCLPointCloud2> sor_b;
   sor_b.setInputCloud (cloudPtr_back);
-  sor_b.setLeafSize (0.03, 0.03, 0.03);
+  sor_b.setLeafSize (0.02, 0.02, 0.02);
   sor_b.filter (cloud_filtered_back);
 
   //Combine clouds
@@ -103,16 +104,25 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
   pcl::PointCloud<pcl::PointXYZ>::Ptr xyzCombinedCloudPtr(xyz_combined_cloud);
   pcl::PointCloud<pcl::PointXYZ> *xyz_filtered_cloud = new pcl::PointCloud<pcl::PointXYZ>;
   pcl::PointCloud<pcl::PointXYZ>::Ptr xyzFilteredCloudPtr(xyz_filtered_cloud);
+  pcl::PointCloud<pcl::PointXYZ> *temp_filtered = new pcl::PointCloud<pcl::PointXYZ>;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr tempFilteredPtr(temp_filtered);
 
   // Convert the pcl::PointCloud2 type to pcl::PointCloud<pcl::PointXYZ>
   pcl::fromPCLPointCloud2(*cloud_combined, *xyzCombinedCloudPtr);
 
+  // Passthrough filter to remove spurious NaNs
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud(xyzCombinedCloudPtr);
+    pass.setFilterFieldName ("z");
+    pass.setFilterLimits(-100,100);
+    pass.filter (*tempFilteredPtr);
+
   // Extracting unwanted points
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
   pcl::ExtractIndices<pcl::PointXYZ> extract;
-  for (int i = 0; i < (*xyzCombinedCloudPtr).size(); i++)
+  for (int i = 0; i < (*tempFilteredPtr).size(); i++)
   {
-    pcl::PointXYZ pt(xyzCombinedCloudPtr->points[i].x, xyzCombinedCloudPtr->points[i].y, xyzCombinedCloudPtr->points[i].z);
+    pcl::PointXYZ pt(tempFilteredPtr->points[i].x, tempFilteredPtr->points[i].y, tempFilteredPtr->points[i].z);
     float min_radius = 1.05;
     float max_radius = 2.7;
     if (sqrt(pt.x*pt.x + pt.y*pt.y + pt.z*pt.z) < min_radius || sqrt(pt.x*pt.x + pt.y*pt.y + pt.z*pt.z) > max_radius)
@@ -120,7 +130,7 @@ cloud_cb (const sensor_msgs::PointCloud2ConstPtr& forward , const sensor_msgs::P
       inliers->indices.push_back(i);
     }
   }
-  extract.setInputCloud(xyzCombinedCloudPtr);
+  extract.setInputCloud(tempFilteredPtr);
   extract.setIndices(inliers);
   extract.setNegative(true);
   extract.filter(*xyzFilteredCloudPtr);
