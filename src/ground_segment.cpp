@@ -27,15 +27,25 @@ class segmentation  {
             seg_pub_ground = seg_nh.advertise<sensor_msgs::PointCloud2> ("ground_cloud", 1);
             seg_pub_obs = seg_nh.advertise<sensor_msgs::PointCloud2> ("obs_cloud", 1);
         }
-    
+    // void getParameter(){
+
+    //     // Get parameters
+    //     seg_nh.getParam("distanceThreshold",_distance_threshold, 0.12);
+        
+    // }
+
+    void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_in);
+
+
     private:
 
     ros::NodeHandle seg_nh;
     ros::Publisher seg_pub_ground;
     ros::Publisher seg_pub_obs;
     ros::Subscriber seg_sub;
+    double _distance_threshold;
 
-    void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_in);
+    
 
 };
 
@@ -65,7 +75,7 @@ void segmentation::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_in)
   pass.filter (*xyzCloudFilteredPtr); 
 
 //   ## RANSAC plane method ############################################################################################
-// ## Comment : Works well with distance threshold = 0.11###############################################################
+// ## Comment : Works well with distance threshold = 0.14 ###############################################################
 
   // Create a pcl object to hold the ransac filtered results
   pcl::PointCloud<pcl::PointXYZ> *xyz_ground_ransac = new pcl::PointCloud<pcl::PointXYZ>;
@@ -83,7 +93,7 @@ void segmentation::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_in)
   // Mandatory
   seg.setModelType (pcl::SACMODEL_PLANE);
   seg.setMethodType (pcl::SAC_RANSAC);
-  seg.setDistanceThreshold (0.11);
+  seg.setDistanceThreshold (0.14);
   seg.setInputCloud (xyzCloudFilteredPtr);
   seg.segment (*ground, *coefficients);
 
@@ -112,7 +122,7 @@ void segmentation::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_in)
 // ##########################################################################################################
 
 //   ## RANSAC normal plane method ############################################################################################
-// ## Comment : Require more test to get the optimal param#####################################################################
+// ## Comment : Require more test to get the optimal param #####################################################################
 
 //   // Create a pcl object to hold the ransac filtered results
 //   pcl::PointCloud<pcl::PointXYZ> *xyz_ground_ransac = new pcl::PointCloud<pcl::PointXYZ>;

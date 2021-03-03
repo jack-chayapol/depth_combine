@@ -43,11 +43,11 @@ obs_cb (const sensor_msgs::PointCloud2ConstPtr& obs , const sensor_msgs::PointCl
         pcl_ros::transformPointCloud ("base_link", *obs, conv_cloud_obs, tfBuffer);
         pcl_ros::transformPointCloud ("base_link", *velodyne, conv_cloud_velodyne, tfBuffer);
               
-      // ROS_INFO("tf received\n");
+      ROS_INFO("tf received\n");
     }
   catch (tf2::TransformException &ex) 
     {
-      // ROS_WARN("Failure %s\n", ex.what()); //Print exception which was caught
+      ROS_WARN("Failure %s\n", ex.what()); //Print exception which was caught
     }
   
   // Container for original & filtered data
@@ -91,13 +91,15 @@ main (int argc, char** argv)
 
   //Synchronize the message before calling obs_cb
   message_filters::Subscriber<sensor_msgs::PointCloud2> obs_sub(nh, "/obs_cloud", 1000);
-  message_filters::Subscriber<sensor_msgs::PointCloud2> velodyne_sub(nh, "/velodyne_points", 1000);
+  // message_filters::Subscriber<sensor_msgs::PointCloud2> obs_sub(nh, "/depth_combined", 1000);
+  message_filters::Subscriber<sensor_msgs::PointCloud2> velodyne_sub(nh, "/upper_velodyne_vlp16/depth/points", 1000);
   
   typedef sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> MySyncPolicy;
   // ApproximateTime takes a queue size as its constructor argument, hence MySyncPolicy(10)
   Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), obs_sub, velodyne_sub);
   sync.registerCallback(boost::bind(&obs_cb, _1, _2));
 
+  
   // Create a ROS publisher for the output point cloud
   pub = nh.advertise<sensor_msgs::PointCloud2>("obstacle", 1);
 
